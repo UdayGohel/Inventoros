@@ -28,7 +28,7 @@ FROM dunglas/frankenphp:1-php${PHP_VERSION} AS base
 # server version (Debian's own client refuses to dump newer servers).
 RUN set -eux; \
     apt-get update; \
-    apt-get install -y --no-install-recommends ca-certificates curl gnupg unzip; \
+    apt-get install -y --no-install-recommends ca-certificates curl gnupg unzip git; \
     install -d /usr/share/postgresql-common/pgdg; \
     curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc; \
     . /etc/os-release; \
