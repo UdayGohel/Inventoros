@@ -94,8 +94,13 @@
         }
     },
     "config": {
+        "source-fallback": true,
         "optimize-autoloader": true,
-        "preferred-install": "dist",
+        "preferred-install": {
+            "tightenco/ziggy": "source",
+            "symfony/*": "source",
+            "*": "dist"
+        },
         "sort-packages": true,
         "allow-plugins": {
             "pestphp/pest-plugin": true,
