@@ -490,7 +490,7 @@ final class HookRegistry
                 'example' => "add_action('organization_member_added', function (\$membership, \$actor) { /* ... */ });",
             ],
             'inter_company_transfer_completed' => [
-                'description' => 'Fired after commit when stock moved between two organizations (InterCompanyTransferService::transfer). $transfer holds both organization ids and its lines with both adjustment ids',
+                'description' => 'Fired after commit when stock moved between two organizations (InterCompanyTransferService::transfer). $transfer holds both organization ids and its lines with both adjustment ids and the serials and batches each moved',
                 'parameters' => ['$transfer', '$actor'],
                 'example' => "add_action('inter_company_transfer_completed', function (\$transfer, \$actor) { /* ... */ });",
             ],
@@ -606,7 +606,7 @@ final class HookRegistry
             // BATCH FILTERS
             // ========================================
             'batch_allocatable_quantity' => [
-                'description' => 'How many units of a batch first-expiry-first-out allocation may draw on when an order line for a batch-tracked product is fulfilled, on every surface. Return fewer than $quantity to hold units back (a quarantined or recalled lot); held units are skipped, do not count toward covering the line, and stay in the batch. Answers are clamped to 0..$quantity; anything that is not a number is ignored. Keep the previous value when you have no objection',
+                'description' => 'How many units of a batch first-expiry-first-out allocation may draw on when an order line for a batch-tracked product is fulfilled, or a work order consumes a batch-tracked component ($order_item is then the WorkOrderItem), on every surface. Return fewer than $quantity to hold units back (a quarantined or recalled lot); held units are skipped, do not count toward covering the line, and stay in the batch. Answers are clamped to 0..$quantity; anything that is not a number is ignored. Keep the previous value when you have no objection',
                 'parameters' => ['$quantity', '$batch', '$product', '$order_item'],
                 'example' => "add_filter('batch_allocatable_quantity', function (\$quantity, \$batch, \$product, \$orderItem) { return is_on_hold(\$batch) ? 0 : \$quantity; });",
             ],

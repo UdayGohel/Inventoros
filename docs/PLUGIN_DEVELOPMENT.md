@@ -332,7 +332,7 @@ add_action('stock_changed', function ($product, $variant, array $change) {
 | `webhook_delivery_attempted` | `$delivery`, `$webhook`, `$result` | Once per outbound webhook delivery attempt: success, HTTP error, refused private destination or connection failure. `$result` is `[successful, status, duration_ms, error, attempt, will_retry]`. See [Outbound webhook events](#outbound-webhook-events). |
 | `organization_switched` | `$user`, `$from_organization_id`, `$to_organization_id` | A signed-in user switched their session to another organization they belong to. `$user` already works in the new one. See [Organizations and memberships](#organizations-and-memberships). |
 | `organization_member_added` | `$membership`, `$actor` | A user was given a membership of an organization other than their home one (after commit). |
-| `inter_company_transfer_completed` | `$transfer`, `$actor` | Stock moved between two organizations (after commit). `$transfer` is an `InterCompanyTransfer` with `from_organization_id`, `to_organization_id` and its `lines`, each with the adjustment booked on each side. |
+| `inter_company_transfer_completed` | `$transfer`, `$actor` | Stock moved between two organizations (after commit). `$transfer` is an `InterCompanyTransfer` with `from_organization_id`, `to_organization_id` and its `lines`, each with the adjustment booked on each side and the `serials` and `batches` it moved. |
 | `organization_member_removed` | `$organization_id`, `$user`, `$actor` | A membership was withdrawn (after commit). The user's roles, warehouse assignments and API tokens in that organization are already gone. |
 
 ## Filter reference
@@ -355,7 +355,7 @@ A filter callback receives the value first, then the listed context, and must re
 | `product_update_validation_rules` | `$rules`, `$product`, `$request` | Validation rules of the web product edit form. |
 | `product_update_data` | `$validated_data`, `$product`, `$request` | Validated data before a product is updated from the web form. |
 | `stock_audit_completing` | `$allowed`, `$stock_audit`, `$user`, `$allow_uncounted` | Whether a stock audit may be completed, on every surface (web, REST), under the audit's row lock and before any recount is booked. Return `true` to allow it; return a reason string to refuse it (the web page shows it as the error, the REST API answers 422 with `"error": "completion_vetoed"` and the reason as `message`), or `false` for a generic refusal. Pass `$allowed` through when you have no objection, so another plugin's refusal stands. See [Holding a stock audit](#holding-a-stock-audit). |
-| `batch_allocatable_quantity` | `$quantity`, `$batch`, `$product`, `$order_item` | How many units of a batch first-expiry-first-out allocation may draw on when an order line for a batch-tracked product is fulfilled (order create and edit, every surface), inside the order transaction. Return fewer than `$quantity` to hold units back, for example a quarantined or recalled lot: held units are skipped, the next batch in FEFO order is used, and they do not count toward covering the line (in best-effort mode a line the remaining batches cannot cover is left unallocated; with `strict_tracked_stock` the order is refused). Answers are clamped to `0..$quantity`; anything that is not a number is ignored. Pass `$quantity` through when you have no objection, and keep it fast: it runs once per batch of the product. |
+| `batch_allocatable_quantity` | `$quantity`, `$batch`, `$product`, `$order_item` | How many units of a batch first-expiry-first-out allocation may draw on when an order line for a batch-tracked product is fulfilled (order create and edit, every surface), inside the order transaction, and when a completing work order consumes a batch-tracked component, inside the work order transaction (`$order_item` is then the `WorkOrderItem`; a work order is always strict, so a line its batches cannot cover refuses the completion). Return fewer than `$quantity` to hold units back, for example a quarantined or recalled lot: held units are skipped, the next batch in FEFO order is used, and they do not count toward covering the line (in best-effort mode a line the remaining batches cannot cover is left unallocated; with `strict_tracked_stock` the order is refused). Answers are clamped to `0..$quantity`; anything that is not a number is ignored. Pass `$quantity` through when you have no objection, and keep it fast: it runs once per batch of the product. |
 | `order_total_calculation` | `$total`, `$order` | The order total, each time `OrderService` computes it (on create and on every edit, from every surface), after line and order discounts, tax and shipping. `$total` is a 2-decimal string (`subtotal - discount_amount + tax + shipping`); `$order` already holds those parts and, on create, has no `id` yet. Return a number or numeric string. A negative total, or one below what the customer has already paid, is rejected with a validation error. Changing it breaks the `subtotal - discount + tax + shipping = total` identity on the stored order, so prefer adjusting the inputs where you can. |
 | `supplier_list_query` | `$query`, `$request` | The supplier list query. The organization scope is re-applied afterwards. |
 | `supplier_list_data` | `$suppliers`, `$request` | The paginated suppliers before the list page renders. |
@@ -766,6 +766,7 @@ Users and installs with one organization see no change: the switcher is hidden, 
 2. **Work in another organization only through `runAs()` or `authorize()`.** They check the membership and the permissions in that organization, and `runAs()` confines every scoped query, and every new tenant row, to it for the duration of the callback. Pass the user the callback receives to core services; never read `auth()->user()` inside it.
 3. **Change memberships only through `OrganizationMembershipService`.** It refuses to touch the home organization (that is the user screens' job) or to remove an organization's last administrator, cleans up roles, warehouse assignments and tokens, writes the security log and fires the `organization_member_*` actions. Who may add or remove members is the caller's decision: check it first (for example `manage_organization` in the target organization through `authorize()`).
 4. **Key caches and stored state by organization**, and pass the organization explicitly to everything that runs outside a request.
+5. **Address an organization's members, not its home users.** To notify, assign or list "the users of an organization", use `app(ActiveOrganization::class)->membersIn($organizationId, $permissions)`: its home users and the members added from other organizations, each loaded into it so the permissions are those held there, with withdrawn members left out. `User::query()->memberOf($organizationId)` is the same set as a query (for a picker of ids and names), and the `App\Rules\OrganizationMember` rule validates a picked id. `User::where('organization_id', ...)` lists home users only, which is what the Users screens show.
 
 ```php
 use App\Enums\Permission;
@@ -786,7 +787,7 @@ app(OrganizationMembershipService::class)->add($organization, $user, 'member', $
 
 ### Moving stock between organizations
 
-`InterCompanyTransferService::transfer($actor, $fromOrganizationId, $toOrganizationId, $lines, $notes, $idempotencyKey)` moves stock as one atomic operation: an `inter_company_out` adjustment in the source organization (never below zero) and an `inter_company_in` adjustment in the destination, both referencing one `InterCompanyTransfer`, so each organization's ledger shows its side. The actor must be a member of both organizations holding `transfer_stock` in each, with warehouse access to every location named (a user restricted to some warehouses must name a location on both sides, and cannot move variant stock, which has no locations). Each line names `from_product_id`, `to_product_id` and `quantity`, and optionally the variants (required for a product sold by variant) and the locations on each side; products and locations of the wrong organization are refused as not found, and serial or batch tracked products and kits are refused. Pass an idempotency key so a retried call returns the first transfer instead of moving the stock twice. Read transfers with `InterCompanyTransfer::involving($organizationId)`, never unfiltered.
+`InterCompanyTransferService::transfer($actor, $fromOrganizationId, $toOrganizationId, $lines, $notes, $idempotencyKey)` moves stock as one atomic operation: an `inter_company_out` adjustment in the source organization (never below zero) and an `inter_company_in` adjustment in the destination, both referencing one `InterCompanyTransfer`, so each organization's ledger shows its side. The actor must be a member of both organizations holding `transfer_stock` in each, with warehouse access to every location named (a user restricted to some warehouses must name a location on both sides, and cannot move variant stock, which has no locations). Each line names `from_product_id`, `to_product_id` and `quantity`, and optionally the variants (required for a product sold by variant) and the locations on each side; products and locations of the wrong organization are refused as not found. Pass an idempotency key so a retried call returns the first transfer instead of moving the stock twice. Read transfers with `InterCompanyTransfer::involving($organizationId)`, never unfiltered.
 
 ```php
 use App\Services\Organizations\InterCompanyTransferService;
@@ -794,6 +795,22 @@ use App\Services\Organizations\InterCompanyTransferService;
 $transfer = app(InterCompanyTransferService::class)->transfer($user, $holdingId, $subsidiaryId, [
     ['from_product_id' => $source->id, 'to_product_id' => $target->id, 'quantity' => 12],
 ], notes: 'Inter-company order IC-1042', idempotencyKey: 'ic-order-1042');
+```
+
+Tracked products and kits move too; both sides of a line must be the same kind of product:
+
+- **Serial tracked**: name the units with `serials` (serial numbers of the source product's available serials; `quantity` may be left out). The source serials stay behind with status `transferred` and the destination product gets serials with the same numbers. A serial number that already exists in the destination organization fails the whole transfer, unless it is a serial that earlier left that organization, which is revived. A transferred serial cannot be changed afterwards.
+- **Batch tracked**: name `batches` as `[['batch_id' => ..., 'quantity' => ...]]` (the source product's batches; there is no automatic FEFO pick, so a lot a plugin holds back is never moved by accident). The destination gets the same lot number, manufacture and expiry dates, topping up its batch of that lot or creating one; a destination lot with that number and another expiry date fails the transfer. A batch asked for more than it holds throws `InsufficientStockException`.
+- **Kits**: transfer a kit into a kit whose components have the same SKUs and per-kit quantities. The line is booked as one line per component (each with `from_kit_product_id`, `to_kit_product_id` and `kit_quantity`), whole units only. Kits with serial or batch tracked components, components sold by variant or nested kits are refused: transfer those components as their own lines.
+
+Each line of the returned transfer (and of the one `inter_company_transfer_completed` receives) has `serials` (serial number, `from_serial_id`, `to_serial_id`) and `batches` (lot number, dates, quantity, `from_batch_id`, `to_batch_id`) loaded.
+
+```php
+$transfer = app(InterCompanyTransferService::class)->transfer($user, $holdingId, $subsidiaryId, [
+    ['from_product_id' => $phone->id, 'to_product_id' => $theirPhone->id, 'serials' => ['SN-1001', 'SN-1002']],
+    ['from_product_id' => $milk->id, 'to_product_id' => $theirMilk->id, 'batches' => [['batch_id' => $lot->id, 'quantity' => 40]]],
+    ['from_product_id' => $starterKit->id, 'to_product_id' => $theirStarterKit->id, 'quantity' => 5],
+], idempotencyKey: 'ic-order-1043');
 ```
 
 Hooks that a core service fires after commit (`stock_changed`, `stock_adjusted` and the other domain hooks) run in the request's active organization, which can differ from the record's when the change was made inside `runAs()`. Listeners must use the record's own `organization_id`, as they already must in queued jobs.
@@ -816,7 +833,7 @@ Resolve services from the container (`app(OrderService::class)`). Methods that t
 | `App\Services\ScanLookupService` | `resolve()`, `locationSummary()` |
 | `App\Services\ReorderService` | `primarySupplier()`, `suggestedQuantity()`, `createDraftPurchaseOrder()` |
 | `App\Services\Organizations\OrganizationMembershipService` | `isMember()`, `roleIn()`, `organizationsFor()`, `members()`, `add()`, `changeRole()`, `remove()`, `createOrganization()` |
-| `App\Services\Organizations\ActiveOrganization` | `userIn()`, `runAs()`, `authorize()` |
+| `App\Services\Organizations\ActiveOrganization` | `userIn()`, `membersIn()`, `runAs()`, `authorize()` |
 | `App\Services\Organizations\InterCompanyTransferService` | `transfer()` |
 
 Check a method's docblock for its rules (locks it takes, exceptions it throws, which hooks it fires). On an older core, feature-detect a newer parameter with `(new \ReflectionMethod(OrderService::class, 'cancel'))->getNumberOfParameters()`.
