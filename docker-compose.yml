@@ -32,10 +32,13 @@ x-php: &php-base
     MAIL_PORT: 1025
     MAIL_FROM_ADDRESS: dev@inventoros.local
     MAIL_FROM_NAME: Inventoros
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   volumes: &php-volumes
     # Persist sqlite DB + storage across container restarts (shared by all three)
     - app-data:/app/database
     - app-storage:/app/storage
+    - ./.env:/app/.env
     # Live-reload PHP source during dev. Comment out for production-style image use.
     - ./app:/app/app
     - ./routes:/app/routes
@@ -44,6 +47,7 @@ x-php: &php-base
     - ./database/migrations:/app/database/migrations
     - ./database/seeders:/app/database/seeders
     - ./database/factories:/app/database/factories
+    - ./plugins:/app/plugins
   restart: unless-stopped
 
 services:
