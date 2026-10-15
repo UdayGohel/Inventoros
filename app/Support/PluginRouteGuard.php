@@ -39,19 +39,38 @@ final class PluginRouteGuard
     public const PLUGIN_NAME_PREFIX = 'plg.';
 
     /**
+     * Compute a unique signature for a route to reliably identify it across
+     * CompiledRouteCollection instantiations (which create new Route objects
+     * on every call to getRoutes() when routes are cached).
+     */
+    public static function signature(RoutingRoute $route): string
+    {
+        $methods = implode('|', $route->methods());
+        $domain = (string) $route->getDomain();
+        $uri = $route->uri();
+        $name = (string) $route->getName();
+        $uses = $route->getAction('uses');
+        $actionUses = is_string($uses)
+            ? $uses
+            : (is_object($uses) ? spl_object_hash($uses) : serialize($uses));
+
+        return sha1("{$methods}#{$domain}#{$uri}#{$name}#{$actionUses}");
+    }
+
+    /**
      * The routes registered right now, to tell a plugin's new routes apart.
      * The route objects are kept: a plugin route on exactly the same method
      * and URI replaces the earlier one in the collection, so it could not be
      * found there afterwards.
      *
-     * @return array<int, RoutingRoute> keyed by spl_object_id
+     * @return array<string|int, RoutingRoute> keyed by route signature
      */
     public static function snapshot(): array
     {
         $routes = [];
 
         foreach (Route::getRoutes()->getRoutes() as $route) {
-            $routes[spl_object_id($route)] = $route;
+            $routes[self::signature($route)] = $route;
         }
 
         return $routes;
@@ -61,7 +80,7 @@ final class PluginRouteGuard
      * Throw when a page $slug registered, or a route it added since
      * $before was taken, collides with an existing route.
      *
-     * @param  array<int, RoutingRoute>  $before  snapshot() taken before the plugin loaded
+     * @param  array<string|int, RoutingRoute>  $before  snapshot() taken before the plugin loaded
      *
      * @throws RuntimeException naming every conflict and the namespace to use
      */
@@ -80,7 +99,7 @@ final class PluginRouteGuard
 
         $added = array_values(array_filter(
             Route::getRoutes()->getRoutes(),
-            fn (RoutingRoute $route) => ! isset($before[spl_object_id($route)]),
+            fn (RoutingRoute $route) => ! isset($before[self::signature($route)]) && ! isset($before[spl_object_id($route)]),
         ));
 
         $problems = [];
