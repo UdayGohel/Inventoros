@@ -6,6 +6,7 @@
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
         <title data-inertia>{{ config('app.name', 'Inventoros') }}</title>
+        <meta name="robots" content="noindex, nofollow, noarchive, nosnippet, noimageindex">
 
         <!-- Favicon & app icons -->
         <link rel="icon" href="/favicon.ico" sizes="any">
