@@ -47,6 +47,10 @@ class GstProductController extends Controller
             'rates.*.gst_rate' => 'required|numeric|min:0|max:100',
         ]);
 
+        // Only products of the active organization (Product is organization-scoped).
+        $productIds = array_unique(array_column($rates['rates'], 'product_id'));
+        abort_if(Product::whereIn('id', $productIds)->count() !== count($productIds), 404);
+
         foreach ($rates['rates'] as $rate) {
             DB::table('gst_product_rates')->updateOrInsert(
                 ['product_id' => $rate['product_id']],

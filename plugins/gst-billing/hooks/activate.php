@@ -1,11 +1,13 @@
 <?php
 
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 if (!Schema::hasTable('gst_settings')) {
     Schema::create('gst_settings', function (Blueprint $table) {
         $table->id();
+        $table->unsignedBigInteger('organization_id')->nullable()->unique();
         $table->string('gstin', 15)->nullable();
         $table->string('legal_name')->nullable();
         $table->string('trade_name')->nullable();
@@ -63,8 +65,9 @@ if (!Schema::hasTable('gst_customer_profiles')) {
 if (!Schema::hasTable('gst_invoices')) {
     Schema::create('gst_invoices', function (Blueprint $table) {
         $table->id();
+        $table->unsignedBigInteger('organization_id')->nullable();
         $table->unsignedBigInteger('order_id');
-        $table->string('invoice_number')->unique();
+        $table->string('invoice_number');
         $table->date('invoice_date');
         $table->string('place_of_supply', 2)->nullable();
         $table->decimal('taxable_value', 15, 2)->default(0);
@@ -78,5 +81,52 @@ if (!Schema::hasTable('gst_invoices')) {
         $table->timestamps();
 
         $table->index('order_id');
+        $table->unique(['organization_id', 'invoice_number']);
+    });
+}
+
+// Upgrade from 1.0.0: settings and invoice numbers were shared by every
+// organization. Each step is guarded, so re-activating is safe.
+if (! Schema::hasColumn('gst_settings', 'organization_id')) {
+    Schema::table('gst_settings', function (Blueprint $table) {
+        $table->unsignedBigInteger('organization_id')->nullable()->unique();
+    });
+}
+
+// The old shared row becomes each organization's own copy, so every
+// organization keeps the settings it used before the upgrade.
+$sharedSettings = DB::table('gst_settings')->whereNull('organization_id')->orderBy('id')->first();
+if ($sharedSettings) {
+    $values = (array) $sharedSettings;
+    unset($values['id']);
+
+    foreach (DB::table('organizations')->pluck('id') as $organizationId) {
+        if (! DB::table('gst_settings')->where('organization_id', $organizationId)->exists()) {
+            DB::table('gst_settings')->insert(['organization_id' => $organizationId] + $values);
+        }
+    }
+
+    DB::table('gst_settings')->whereNull('organization_id')->delete();
+}
+
+if (! Schema::hasColumn('gst_invoices', 'organization_id')) {
+    Schema::table('gst_invoices', function (Blueprint $table) {
+        $table->unsignedBigInteger('organization_id')->nullable();
+    });
+}
+
+DB::table('gst_invoices')->whereNull('organization_id')->update([
+    'organization_id' => DB::raw('(SELECT orders.organization_id FROM orders WHERE orders.id = gst_invoices.order_id)'),
+]);
+
+if (Schema::hasIndex('gst_invoices', 'gst_invoices_invoice_number_unique')) {
+    Schema::table('gst_invoices', function (Blueprint $table) {
+        $table->dropUnique('gst_invoices_invoice_number_unique');
+    });
+}
+
+if (! Schema::hasIndex('gst_invoices', ['organization_id', 'invoice_number'], 'unique')) {
+    Schema::table('gst_invoices', function (Blueprint $table) {
+        $table->unique(['organization_id', 'invoice_number']);
     });
 }

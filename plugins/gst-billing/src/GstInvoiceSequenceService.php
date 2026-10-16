@@ -11,7 +11,7 @@ class GstInvoiceSequenceService
      * Generate the next consecutive invoice number for the given prefix and date.
      * Format: {PREFIX}/{YY}-{YY+1}/{0001}
      */
-    public function generateNextInvoiceNumber(string $prefix = 'INV', ?Carbon $date = null): string
+    public function generateNextInvoiceNumber(int $organizationId, string $prefix = 'INV', ?Carbon $date = null): string
     {
         $date = $date ?? Carbon::now();
         
@@ -32,25 +32,24 @@ class GstInvoiceSequenceService
 
         $pattern = $prefix . '/' . $fyString . '/';
 
-        // Use a transaction and lock to ensure consecutive thread-safe sequence
-        return DB::transaction(function () use ($pattern) {
-            $lastInvoice = DB::table('gst_invoices')
-                ->where('invoice_number', 'like', $pattern . '%')
-                ->lockForUpdate()
-                ->orderBy('id', 'desc')
-                ->first();
+        // The caller holds the organization row lock until it has inserted the
+        // invoice (GstInvoiceController), so two requests never read the same last number.
+        $lastInvoice = DB::table('gst_invoices')
+            ->where('organization_id', $organizationId)
+            ->where('invoice_number', 'like', $pattern . '%')
+            ->orderBy('id', 'desc')
+            ->first();
 
-            $sequence = 1;
+        $sequence = 1;
 
-            if ($lastInvoice) {
-                // Extract sequence number
-                $lastNumber = str_replace($pattern, '', $lastInvoice->invoice_number);
-                if (is_numeric($lastNumber)) {
-                    $sequence = (int) $lastNumber + 1;
-                }
+        if ($lastInvoice) {
+            // Extract sequence number
+            $lastNumber = str_replace($pattern, '', $lastInvoice->invoice_number);
+            if (is_numeric($lastNumber)) {
+                $sequence = (int) $lastNumber + 1;
             }
+        }
 
-            return $pattern . str_pad((string)$sequence, 4, '0', STR_PAD_LEFT);
-        });
+        return $pattern . str_pad((string)$sequence, 4, '0', STR_PAD_LEFT);
     }
 }

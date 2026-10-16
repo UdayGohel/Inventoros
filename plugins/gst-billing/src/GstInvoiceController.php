@@ -32,7 +32,7 @@ class GstInvoiceController extends Controller
      */
     public function syncAndCalculateInvoice(Order $order): array
     {
-        $settings = DB::table('gst_settings')->first();
+        $settings = DB::table('gst_settings')->where('organization_id', $order->organization_id)->first();
         $sellerStateCode = $settings->state_code ?? '24'; // Default to Gujarat
         $groupingMode = $settings->invoice_item_grouping ?? 'matrix';
 
@@ -222,35 +222,45 @@ class GstInvoiceController extends Controller
         $roundedTotal = round($totalBeforeRound);
         $roundOff = round($roundedTotal - $totalBeforeRound, 2);
 
-        // Find existing invoice or generate sequential number
-        $existingInvoice = DB::table('gst_invoices')->where('order_id', $order->id)->first();
-        if ($existingInvoice && !empty($existingInvoice->invoice_number)) {
-            $invoiceNumber = $existingInvoice->invoice_number;
-        } else {
-            $prefix = $settings->invoice_prefix ?? 'INV';
-            $invoiceNumber = $this->sequenceService->generateNextInvoiceNumber($prefix, Carbon::parse($order->order_date ?? now()));
-        }
+        $invoiceDate = Carbon::parse($order->order_date ?? now());
 
-        // Synchronize database record with exact computed numbers
-        DB::table('gst_invoices')->updateOrInsert(
-            ['order_id' => $order->id],
-            [
-                'invoice_number' => $invoiceNumber,
-                'invoice_date' => Carbon::parse($order->order_date ?? now())->toDateString(),
-                'place_of_supply' => $pos,
-                'taxable_value' => $totalTaxable,
-                'cgst_amount' => $totalCgst,
-                'sgst_amount' => $totalSgst,
-                'igst_amount' => $totalIgst,
-                'cess_amount' => $totalCess,
-                'round_off' => $roundOff,
-                'total_amount' => $roundedTotal,
-                'hsn_summary' => json_encode($hsnSummary),
-                'updated_at' => now(),
-            ]
-        );
+        // Number and insert in one transaction under the organization's row lock,
+        // so concurrent requests cannot allocate the same invoice number.
+        $invoice = DB::transaction(function () use ($order, $settings, $invoiceDate, $pos, $totalTaxable, $totalCgst, $totalSgst, $totalIgst, $totalCess, $roundOff, $roundedTotal, $hsnSummary) {
+            DB::table('organizations')->where('id', $order->organization_id)->lockForUpdate()->first();
 
-        $invoice = DB::table('gst_invoices')->where('order_id', $order->id)->first();
+            // Find existing invoice or generate sequential number
+            $existingInvoice = DB::table('gst_invoices')->where('order_id', $order->id)->first();
+            if ($existingInvoice && !empty($existingInvoice->invoice_number)) {
+                $invoiceNumber = $existingInvoice->invoice_number;
+            } else {
+                $prefix = $settings->invoice_prefix ?? 'INV';
+                $invoiceNumber = $this->sequenceService->generateNextInvoiceNumber($order->organization_id, $prefix, $invoiceDate);
+            }
+
+            // Synchronize database record with exact computed numbers
+            DB::table('gst_invoices')->updateOrInsert(
+                ['order_id' => $order->id],
+                [
+                    'organization_id' => $order->organization_id,
+                    'invoice_number' => $invoiceNumber,
+                    'invoice_date' => $invoiceDate->toDateString(),
+                    'place_of_supply' => $pos,
+                    'taxable_value' => $totalTaxable,
+                    'cgst_amount' => $totalCgst,
+                    'sgst_amount' => $totalSgst,
+                    'igst_amount' => $totalIgst,
+                    'cess_amount' => $totalCess,
+                    'round_off' => $roundOff,
+                    'total_amount' => $roundedTotal,
+                    'hsn_summary' => json_encode($hsnSummary),
+                    'updated_at' => now(),
+                ]
+            );
+
+            return DB::table('gst_invoices')->where('order_id', $order->id)->first();
+        });
+
         $amountInWords = $this->numberToWords->convert((float) $invoice->total_amount);
 
         // Generate dynamic UPI QR Code if UPI ID is configured

@@ -26,7 +26,8 @@ class GstSettingsController extends Controller
             'terms_conditions' => 'nullable|string',
         ]);
 
-        $settings = \Illuminate\Support\Facades\DB::table('gst_settings')->first();
+        $organizationId = app(\App\Support\Tenancy\OrganizationContext::class)->id();
+        $settings = \Illuminate\Support\Facades\DB::table('gst_settings')->where('organization_id', $organizationId)->first();
 
         if ($settings) {
             \Illuminate\Support\Facades\DB::table('gst_settings')
@@ -35,6 +36,7 @@ class GstSettingsController extends Controller
         } else {
             \Illuminate\Support\Facades\DB::table('gst_settings')->insert(
                 array_merge($validated, [
+                    'organization_id' => $organizationId,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ])

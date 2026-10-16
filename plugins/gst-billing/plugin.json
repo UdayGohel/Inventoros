@@ -1,7 +1,7 @@
 {
     "name": "GST Billing & Tax Invoicing (India)",
     "description": "Indian GST compliance, HSN/SAC codes, CGST/SGST/IGST calculation, GSTR-1 summaries, and Rule 46 Tax Invoice PDFs.",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": "Inventoros Community",
     "requires": "2.0.0",
     "requires_php": "8.4",
