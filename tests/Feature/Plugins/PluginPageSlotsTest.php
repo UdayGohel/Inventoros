@@ -41,7 +41,9 @@ final class PluginPageSlotsTest extends TestCase
     /** page id => [Vue page, slots] */
     private const PAGES = [
         'customers.index' => ['Customers/Index', ['header', 'footer']],
-        'customers.show' => ['Customers/Show', ['header', 'actions', 'footer']],
+        'customers.show' => ['Customers/Show', ['header', 'actions', 'business-details', 'footer']],
+        'customers.create' => ['Customers/Create', ['business-details']],
+        'customers.edit' => ['Customers/Edit', ['business-details']],
         'warehouses.index' => ['Warehouses/Index', ['header', 'footer']],
         'warehouses.show' => ['Warehouses/Show', ['header', 'actions', 'footer']],
         'stock-audits.index' => ['StockAudits/Index', ['header', 'footer']],
@@ -128,6 +130,8 @@ final class PluginPageSlotsTest extends TestCase
         return [
             'customers.index' => route('customers.index'),
             'customers.show' => route('customers.show', $customer),
+            'customers.create' => route('customers.create'),
+            'customers.edit' => route('customers.edit', $customer),
             'warehouses.index' => route('warehouses.index'),
             'warehouses.show' => route('warehouses.show', $warehouse),
             'stock-audits.index' => route('stock-audits.index'),
@@ -205,7 +209,7 @@ final class PluginPageSlotsTest extends TestCase
     {
         $this->get($this->urls()['customers.show'])
             ->assertInertia(fn (AssertableInertia $page) => $page
-                ->where('pluginComponents', ['header' => [], 'actions' => [], 'footer' => []]));
+                ->where('pluginComponents', ['header' => [], 'actions' => [], 'businessDetails' => [], 'footer' => []]));
     }
 
     public function test_every_vue_page_renders_its_slots(): void

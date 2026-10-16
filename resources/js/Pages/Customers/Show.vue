@@ -307,6 +307,8 @@ const thClass = 'px-4 py-2.5 text-left text-xs font-medium tracking-tight text-t
                                 <dt class="text-xs text-text-tertiary">{{ t('common.currency') }}</dt>
                                 <dd class="mt-1 text-sm text-text-primary">{{ customer.currency }}</dd>
                             </div>
+                            <!-- Plugin Slot: Business Details -->
+                            <PluginSlot slot="business-details" :components="pluginComponents?.businessDetails" />
                             <div v-if="customer.notes" class="border-t border-border-subtle pt-3">
                                 <dt class="text-xs text-text-tertiary">{{ t('common.notes') }}</dt>
                                 <dd class="mt-1 whitespace-pre-wrap text-sm text-text-primary">{{ customer.notes }}</dd>

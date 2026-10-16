@@ -280,6 +280,16 @@ final class HookRegistry
                 'parameters' => ['$customer', '$user'],
                 'example' => "add_action('customer_updated', function (\$customer, \$user) { /* ... */ });",
             ],
+            'customer_after_create' => [
+                'description' => 'Fired after a customer is created from the web form; plugin fields arrive in $request under plugin_data.{slug}',
+                'parameters' => ['$customer', '$request'],
+                'example' => "add_action('customer_after_create', function (\$customer, \$request) { /* ... */ });",
+            ],
+            'customer_after_update' => [
+                'description' => 'Fired after a customer is updated from the web form, also when only plugin fields changed',
+                'parameters' => ['$customer', '$request'],
+                'example' => "add_action('customer_after_update', function (\$customer, \$request) { /* ... */ });",
+            ],
             'customer_deleted' => [
                 'description' => 'Fired after a customer is deleted on any surface',
                 'parameters' => ['$customer', '$user'],
@@ -557,6 +567,16 @@ final class HookRegistry
                 'description' => 'Modify all props passed to the product detail page',
                 'parameters' => ['$data', '$product'],
                 'example' => "add_filter('product_show_page_data', function (\$data, \$product) { \$data['custom'] = 'value'; return \$data; });",
+            ],
+            'customer_store_validation_rules' => [
+                'description' => 'Modify validation rules for creating a customer (web form and REST API); put plugin fields under plugin_data.{slug}',
+                'parameters' => ['$rules', '$request'],
+                'example' => "add_filter('customer_store_validation_rules', function (\$rules, \$request) { \$rules['plugin_data.my-plugin.field'] = ['nullable', 'string']; return \$rules; });",
+            ],
+            'customer_update_validation_rules' => [
+                'description' => 'Modify validation rules for updating a customer (web form and REST API); put plugin fields under plugin_data.{slug}',
+                'parameters' => ['$rules', '$customer', '$request'],
+                'example' => "add_filter('customer_update_validation_rules', function (\$rules, \$customer, \$request) { return \$rules; });",
             ],
             'product_store_validation_rules' => [
                 'description' => 'Modify validation rules for creating a product from the web form',

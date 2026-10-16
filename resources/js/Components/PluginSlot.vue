@@ -19,6 +19,13 @@ const props = defineProps({
         type: String,
         default: null,
     },
+    // The page's Inertia form, on slots inside a form (customers.create /
+    // customers.edit business-details). Plugins add their fields under
+    // form.plugin_data[slug], which is submitted with the page's own fields.
+    form: {
+        type: Object,
+        default: null,
+    },
 });
 
 const inertiaPage = usePage();
@@ -54,7 +61,7 @@ const rendered = computed(() => {
             v-for="item in rendered"
             :key="item.key"
             :is="item.is"
-            v-bind="item.props"
+            v-bind="form ? { ...item.props, form } : item.props"
         />
     </template>
 </template>

@@ -12,6 +12,7 @@ use App\Models\CustomerContact;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,7 +57,9 @@ class CustomerController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('Customers/Create');
+        return Inertia::render('Customers/Create', [
+            'pluginComponents' => plugin_slots('customers.create', ['business-details']),
+        ]);
     }
 
     /**
@@ -67,12 +70,16 @@ class CustomerController extends Controller
      */
     public function store(StoreCustomerRequest $request)
     {
-        $validated = $request->validated();
+        // Plugin fields (plugin_data.{slug}) are not customer columns; plugins read them from the request.
+        $validated = Arr::except($request->validated(), 'plugin_data');
 
         $validated['organization_id'] = $request->user()->organization_id;
         $validated['is_active'] = $validated['is_active'] ?? true;
 
         $customer = Customer::create($validated);
+
+        // Hook: After a customer is created from the web form
+        do_action('customer_after_create', $customer, $request);
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -103,7 +110,7 @@ class CustomerController extends Controller
         $organization = $customer->organization;
 
         return Inertia::render('Customers/Show', [
-            'pluginComponents' => plugin_slots('customers.show', ['header', 'actions', 'footer']),
+            'pluginComponents' => plugin_slots('customers.show', ['header', 'actions', 'business-details', 'footer']),
             'customer' => $customer,
             'contacts' => $customer->contacts()
                 ->orderBy('id')
@@ -140,6 +147,7 @@ class CustomerController extends Controller
         }
 
         return Inertia::render('Customers/Edit', [
+            'pluginComponents' => plugin_slots('customers.edit', ['business-details']),
             'customer' => $customer,
         ]);
     }
@@ -157,9 +165,12 @@ class CustomerController extends Controller
             abort(404);
         }
 
-        $validated = $request->validated();
+        $validated = Arr::except($request->validated(), 'plugin_data');
 
         $customer->update($validated);
+
+        // Hook: After a customer is updated from the web form (also when only plugin fields changed)
+        do_action('customer_after_update', $customer, $request);
 
         if ($request->wantsJson()) {
             return response()->json([

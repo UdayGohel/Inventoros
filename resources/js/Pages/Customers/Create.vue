@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
+import PluginSlot from '@/Components/PluginSlot.vue';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { currencyOptions } from '@/lib/currencies';
 import { defaultCurrency } from '@/lib/formatSettings';
@@ -11,6 +12,10 @@ import { useI18n } from 'vue-i18n';
 import { ArrowLeft } from 'lucide-vue-next';
 
 const { t } = useI18n();
+
+defineProps({
+    pluginComponents: Object,
+});
 
 const currencies = currencyOptions(usePage().props.supportedCurrencies);
 
@@ -37,6 +42,7 @@ const form = useForm({
     currency: defaultCurrency(),
     notes: '',
     is_active: true,
+    plugin_data: {},
 });
 
 const sameAsShipping = ref(false);
@@ -243,6 +249,9 @@ const fieldError = 'mt-1 text-xs text-status-danger';
                             </select>
                             <p v-if="form.errors.currency" :class="fieldError">{{ form.errors.currency }}</p>
                         </div>
+
+                        <!-- Plugin Slot: Business Details (fields submitted under plugin_data) -->
+                        <PluginSlot slot="business-details" :form="form" :components="pluginComponents?.businessDetails" />
 
                         <div class="md:col-span-2">
                             <label for="notes" :class="fieldLabel">{{ t('common.notes') }}</label>

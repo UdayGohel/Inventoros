@@ -299,6 +299,8 @@ add_action('stock_changed', function ($product, $variant, array $change) {
 | `purchase_order_cancelled` | `$purchase_order`, `$user` | A purchase order is cancelled. |
 | `customer_created` | `$customer`, `$user` | A customer is created on any surface (web, REST, GraphQL, order import), after commit. |
 | `customer_updated` | `$customer`, `$user` | A customer is updated on any surface, once per transaction, after commit. |
+| `customer_after_create` | `$customer`, `$request` | After a customer is created from the web form. Plugin fields arrive in `$request` under `plugin_data.{slug}` (see [Fields in customer forms](#fields-in-customer-forms)). |
+| `customer_after_update` | `$customer`, `$request` | After a customer is updated from the web form, also when only plugin fields changed (unlike `customer_updated`, which needs a changed column). |
 | `customer_deleted` | `$customer`, `$user` | A customer is deleted on any surface. |
 | `return_created` | `$return_order`, `$user` | A return is created. |
 | `return_received` | `$return_order`, `$user` | A return is marked received. |
@@ -349,6 +351,8 @@ A filter callback receives the value first, then the listed context, and must re
 | `product_list_page_data` | `$data`, `$request` | All props of the product list page. |
 | `product_show_data` | `$product`, `$user` | The product before the detail page renders. |
 | `product_show_page_data` | `$data`, `$product` | All props of the product detail page. |
+| `customer_store_validation_rules` | `$rules`, `$request` | Validation rules of a new customer, from the web form and `POST /api/v1/customers`. Add rules for your fields under `plugin_data.{slug}.*`, and keep them optional so clients that do not send them still pass. |
+| `customer_update_validation_rules` | `$rules`, `$customer`, `$request` | Validation rules of a customer edit, from the web form and `PUT /api/v1/customers/{id}`. Same conventions as `customer_store_validation_rules`. |
 | `product_store_validation_rules` | `$rules`, `$request` | Validation rules of the web product create form. |
 | `product_store_data` | `$validated_data`, `$request` | Validated data before a product is created from the web form. |
 | `product_store_response` | `$response`, `$product`, `$request` | The response after a product is created from the web form. |
@@ -475,10 +479,40 @@ Pages and slots that render plugin components:
 | `suppliers.show`, `suppliers.create`, `suppliers.edit` | `header`, `footer` |
 | `categories.index`, `locations.index` | `header`, `footer` |
 | `customers.index`, `warehouses.index`, `stock-audits.index`, `cycle-counts.index`, `stock-transfers.index`, `returns.index`, `work-orders.index` | `header`, `footer` |
-| `customers.show`, `warehouses.show`, `stock-audits.show`, `stock-transfers.show`, `returns.show`, `work-orders.show` | `header`, `actions`, `footer` |
+| `customers.show` | `header`, `actions`, `business-details`, `footer` |
+| `customers.create`, `customers.edit` | `business-details` |
+| `warehouses.show`, `stock-audits.show`, `stock-transfers.show`, `returns.show`, `work-orders.show` | `header`, `actions`, `footer` |
 | `settings.index` | `header`, `sections`, `footer` |
 
 `actions` renders inside the page header's action bar, before the page's own buttons: keep it to small buttons or links. On the settings hub, each component in `sections` is one card in the grid of settings pages; render a `Card` linking to your settings page (the hub does not check the link, so give the placement the same `permission` as the page). Pages without plugin placements render exactly as before.
+
+#### Fields in customer forms
+
+`business-details` sits inside the customer's Business Details card. On `customers.show` it renders inside the card's list of details: render `<div><dt>…</dt><dd>…</dd></div>` pairs. On `customers.create` and `customers.edit` it renders inside the card's two-column grid of fields, and each component also receives the page's Inertia `form` as a prop. Write your fields under `form.plugin_data[slug]` only; they are submitted with the customer, and validation errors come back as `form.errors['plugin_data.{slug}.field']`.
+
+```php
+add_page_component('customers.edit', 'business-details', [
+    'plugin' => 'my-plugin',
+    'component' => 'LoyaltyFields',
+    'permission' => 'edit_customers',
+    'data' => fn () => ['tier' => my_plugin_tier(request()->route('customer')?->id)],
+]);
+
+add_filter('customer_update_validation_rules', function ($rules) {
+    $rules['plugin_data.my-plugin.tier'] = ['nullable', 'in:silver,gold'];
+
+    return $rules;
+});
+
+add_action('customer_after_update', function ($customer, $request) {
+    $fields = $request->validated()['plugin_data']['my-plugin'] ?? null;
+    if ($fields !== null) {   // absent when the user could not see the fields: keep what is stored
+        my_plugin_save_tier($customer->id, $fields['tier']);
+    }
+});
+```
+
+The customer itself never receives `plugin_data`; save your fields in your own table from `customer_after_create` / `customer_after_update`.
 
 ### Tabs on detail pages
 
