@@ -193,6 +193,20 @@ class StockAdjustmentControllerTest extends TestCase
         );
     }
 
+    public function test_stock_adjustments_list_keeps_soft_deleted_product(): void
+    {
+        $this->createStockAdjustment();
+        $this->product->delete();
+
+        $response = $this->actingAs($this->admin)
+            ->get(route('stock-adjustments.index'));
+
+        $response->assertStatus(200);
+        $response->assertInertia(fn ($page) => $page
+            ->where('adjustments.data.0.product.name', 'Test Product')
+        );
+    }
+
     public function test_stock_manager_can_view_stock_adjustments_list(): void
     {
         $this->createStockAdjustment();
