@@ -49,9 +49,17 @@ const submit = () => {
     });
 };
 
-const fieldLabel = 'mb-1.5 block text-xs font-medium text-text-secondary';
-const fieldInput = 'h-9 w-full rounded-md border border-border-subtle bg-surface-canvas px-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand';
-const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-canvas p-3 text-sm text-text-primary placeholder:text-text-tertiary focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand';
+const fieldLabel = 'mb-1 block text-sm font-medium text-text-secondary';
+const fieldInput = 'h-9 w-full rounded-md border border-border-subtle bg-surface-canvas px-3 text-sm text-text-primary placeholder:text-text-tertiary ds-focus-ring';
+const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-canvas px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary ds-focus-ring';
+const fieldHelp = 'mt-1 text-xs text-text-tertiary';
+const fieldError = 'mt-1 text-xs text-status-danger';
+// A bordered option card for a radio or checkbox, highlighted when chosen.
+const optionCard = (selected) => [
+    'flex cursor-pointer items-start gap-2 rounded-lg border bg-surface-canvas p-3 text-sm transition-colors',
+    selected ? 'border-brand' : 'border-border-subtle hover:border-border-strong',
+];
+const optionInput = 'mt-0.5 shrink-0 border-border-subtle bg-surface-canvas text-brand ds-focus-ring';
 </script>
 
 <template>
@@ -73,7 +81,7 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
             description="Configure your GSTIN, registered state, bank details, and invoice preferences to generate Rule 46 compliant tax invoices."
         />
 
-        <div v-if="savedNotice" class="mt-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-600">
+        <div v-if="savedNotice" class="gst-saved mt-4 flex items-center gap-2 rounded-lg p-3 text-sm">
             <CheckCircle2 :size="18" />
             <span>GST settings have been successfully updated!</span>
         </div>
@@ -93,31 +101,33 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
 
                 <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label :class="fieldLabel">Seller GSTIN (15 Digits) *</label>
+                        <label for="gst_gstin" :class="fieldLabel">Seller GSTIN (15 Digits) *</label>
                         <input
+                            id="gst_gstin"
                             v-model="form.gstin"
                             type="text"
                             maxlength="15"
                             placeholder="e.g. 24AAAAA0000A1Z5"
                             :class="fieldInput"
-                            class="uppercase font-mono"
+                            class="gst-uppercase font-mono"
                         />
-                        <p v-if="form.errors.gstin" class="mt-1 text-xs text-status-danger">{{ form.errors.gstin }}</p>
+                        <p v-if="form.errors.gstin" :class="fieldError">{{ form.errors.gstin }}</p>
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">Registered State (Place of Supply origin) *</label>
-                        <select v-model="form.state_code" :class="fieldInput">
+                        <label for="gst_state_code" :class="fieldLabel">Registered State (Place of Supply origin) *</label>
+                        <select id="gst_state_code" v-model="form.state_code" :class="fieldInput">
                             <option v-for="(name, code) in stateCodes" :key="code" :value="code">
                                 [{{ code }}] {{ name }}
                             </option>
                         </select>
-                        <p class="mt-1 text-[11px] text-text-tertiary">Used to determine CGST+SGST (Intra-state) vs IGST (Inter-state).</p>
+                        <p :class="fieldHelp">Used to determine CGST+SGST (Intra-state) vs IGST (Inter-state).</p>
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">Legal Business Name *</label>
+                        <label for="gst_legal_name" :class="fieldLabel">Legal Business Name *</label>
                         <input
+                            id="gst_legal_name"
                             v-model="form.legal_name"
                             type="text"
                             placeholder="e.g. Reliance Retail Ltd."
@@ -126,8 +136,9 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">Trade Name (Brand / Operating Name)</label>
+                        <label for="gst_trade_name" :class="fieldLabel">Trade Name (Brand / Operating Name)</label>
                         <input
+                            id="gst_trade_name"
                             v-model="form.trade_name"
                             type="text"
                             placeholder="e.g. JioMart"
@@ -136,8 +147,9 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
 
                     <div class="md:col-span-2">
-                        <label :class="fieldLabel">Full Registered Address *</label>
+                        <label for="gst_registered_address" :class="fieldLabel">Full Registered Address *</label>
                         <textarea
+                            id="gst_registered_address"
                             v-model="form.registered_address"
                             rows="2"
                             placeholder="Enter complete office address as per GST registration..."
@@ -161,8 +173,9 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
 
                 <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
-                        <label :class="fieldLabel">Bank Name</label>
+                        <label for="gst_bank_name" :class="fieldLabel">Bank Name</label>
                         <input
+                            id="gst_bank_name"
                             v-model="form.bank_name"
                             type="text"
                             placeholder="e.g. HDFC Bank"
@@ -171,8 +184,9 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">Bank Account Number</label>
+                        <label for="gst_bank_account_no" :class="fieldLabel">Bank Account Number</label>
                         <input
+                            id="gst_bank_account_no"
                             v-model="form.bank_account_no"
                             type="text"
                             placeholder="e.g. 50200012345678"
@@ -181,19 +195,21 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">IFSC Code</label>
+                        <label for="gst_bank_ifsc" :class="fieldLabel">IFSC Code</label>
                         <input
+                            id="gst_bank_ifsc"
                             v-model="form.bank_ifsc"
                             type="text"
                             placeholder="e.g. HDFC0001234"
                             :class="fieldInput"
-                            class="uppercase font-mono"
+                            class="gst-uppercase font-mono"
                         />
                     </div>
 
                     <div>
-                        <label :class="fieldLabel">Branch Name</label>
+                        <label for="gst_bank_branch" :class="fieldLabel">Branch Name</label>
                         <input
+                            id="gst_bank_branch"
                             v-model="form.bank_branch"
                             type="text"
                             placeholder="e.g. MG Road Branch"
@@ -202,14 +218,15 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
 
                     <div class="md:col-span-2">
-                        <label :class="fieldLabel">UPI ID (VPA for QR Code on Invoice)</label>
+                        <label for="gst_upi_id" :class="fieldLabel">UPI ID (VPA for QR Code on Invoice)</label>
                         <input
+                            id="gst_upi_id"
                             v-model="form.upi_id"
                             type="text"
                             placeholder="e.g. yourbusiness@okaxis"
                             :class="fieldInput"
                         />
-                        <p class="mt-1 text-[11px] text-text-tertiary">Customers can scan the UPI QR code on the PDF invoice to pay directly.</p>
+                        <p :class="fieldHelp">Customers can scan the UPI QR code on the PDF invoice to pay directly.</p>
                     </div>
                 </div>
             </div>
@@ -226,93 +243,67 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
                     </div>
                 </div>
 
-                <div class="mt-5 grid grid-cols-1 gap-5">
+                <div class="mt-5 grid grid-cols-1 gap-4">
                     <div>
-                        <label :class="fieldLabel">Fiscal Invoice Prefix *</label>
-                        <div class="flex items-center gap-3">
-                            <input
-                                v-model="form.invoice_prefix"
-                                type="text"
-                                maxlength="8"
-                                placeholder="INV"
-                                :class="fieldInput"
-                                class="max-w-xs font-mono uppercase"
-                            />
-                            <span class="text-xs text-text-tertiary">
-                                Example generated number: <strong class="text-text-primary font-mono">{{ form.invoice_prefix || 'INV' }}/26-27/0001</strong>
-                            </span>
-                        </div>
+                        <label for="gst_invoice_prefix" :class="fieldLabel">Fiscal Invoice Prefix *</label>
+                        <input
+                            id="gst_invoice_prefix"
+                            v-model="form.invoice_prefix"
+                            type="text"
+                            maxlength="8"
+                            placeholder="INV"
+                            :class="fieldInput"
+                            class="max-w-xs font-mono uppercase"
+                        />
+                        <p :class="fieldHelp">
+                            Example invoice number: <span class="font-mono font-medium text-text-primary">{{ form.invoice_prefix || 'INV' }}/26-27/0001</span>
+                        </p>
+                        <p v-if="form.errors.invoice_prefix" :class="fieldError">{{ form.errors.invoice_prefix }}</p>
                     </div>
 
                     <!-- Print Layout / Matrix Grouping Toggle -->
-                    <div>
-                        <label :class="fieldLabel">Invoice Print Layout & Variant Grouping</label>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1.5">
-                            <label :class="[
-                                'flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-all',
-                                form.invoice_item_grouping === 'matrix' 
-                                    ? 'border-brand bg-brand-soft/30 text-text-primary' 
-                                    : 'border-border-subtle bg-surface-canvas text-text-secondary hover:border-border-strong'
-                            ]">
-                                <input
-                                    v-model="form.invoice_item_grouping"
-                                    type="radio"
-                                    value="matrix"
-                                    class="mt-0.5 text-brand focus:ring-brand"
-                                />
-                                <div>
-                                    <div class="text-xs font-semibold text-text-primary">
-                                        Group by Product & Size Matrix <span class="text-[10px] text-brand uppercase font-bold">(1-Page Compact)</span>
-                                    </div>
-                                    <p class="text-[11px] text-text-tertiary mt-1 leading-relaxed">
-                                        Recommended for footwear & garments. Condenses multi-size orders (e.g. 15 sizes of 3 styles) into 3 clean rows with a size curve like <code>Sizes: [6: 1, 7: 1, 8: 1]</code> so bills fit on a single A4 page.
-                                    </p>
-                                </div>
+                    <fieldset>
+                        <legend :class="fieldLabel">Invoice Print Layout & Variant Grouping</legend>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                            <label :class="optionCard(form.invoice_item_grouping === 'matrix')">
+                                <input v-model="form.invoice_item_grouping" type="radio" value="matrix" :class="optionInput" class="rounded-full" />
+                                <span>
+                                    <span class="block font-medium text-text-primary">
+                                        Group by Product & Size Matrix
+                                        <span class="ml-1 text-xs font-medium text-brand">1-page compact</span>
+                                    </span>
+                                    <span class="mt-0.5 block text-xs text-text-tertiary">
+                                        Recommended for footwear and garments. Condenses multi-size orders (e.g. 15 sizes of 3 styles) into 3 rows with a size curve like <code class="font-mono">Sizes: [6: 1, 7: 1, 8: 1]</code>, so bills fit on one A4 page.
+                                    </span>
+                                </span>
                             </label>
 
-                            <label :class="[
-                                'flex items-start gap-3 p-3.5 rounded-lg border cursor-pointer transition-all',
-                                form.invoice_item_grouping === 'itemized' 
-                                    ? 'border-brand bg-brand-soft/30 text-text-primary' 
-                                    : 'border-border-subtle bg-surface-canvas text-text-secondary hover:border-border-strong'
-                            ]">
-                                <input
-                                    v-model="form.invoice_item_grouping"
-                                    type="radio"
-                                    value="itemized"
-                                    class="mt-0.5 text-brand focus:ring-brand"
-                                />
-                                <div>
-                                    <div class="text-xs font-semibold text-text-primary">
-                                        Itemized Lines (1 Row per Size/Variant)
-                                    </div>
-                                    <p class="text-[11px] text-text-tertiary mt-1 leading-relaxed">
-                                        Prints each individual variant and SKU as its own separate line item on the invoice.
-                                    </p>
-                                </div>
+                            <label :class="optionCard(form.invoice_item_grouping === 'itemized')">
+                                <input v-model="form.invoice_item_grouping" type="radio" value="itemized" :class="optionInput" class="rounded-full" />
+                                <span>
+                                    <span class="block font-medium text-text-primary">Itemized Lines (1 Row per Size/Variant)</span>
+                                    <span class="mt-0.5 block text-xs text-text-tertiary">
+                                        Prints each variant and SKU as its own line item on the invoice.
+                                    </span>
+                                </span>
                             </label>
                         </div>
-                    </div>
+                    </fieldset>
 
-                    <div class="rounded-lg border border-border-subtle bg-surface-canvas p-4">
-                        <label class="flex items-start gap-3 cursor-pointer">
-                            <input
-                                v-model="form.is_composition_scheme"
-                                type="checkbox"
-                                class="mt-1 h-4 w-4 rounded border-border-subtle text-brand focus:ring-brand"
-                            />
-                            <div>
-                                <span class="text-sm font-medium text-text-primary">Composition Scheme Taxpayer</span>
-                                <p class="text-xs text-text-tertiary mt-0.5">
-                                    If enabled, invoices will be issued as a <strong>"Bill of Supply"</strong> with the statutory declaration: <em>"Composition taxable person, not eligible to collect tax on supplies"</em> instead of charging GST.
-                                </p>
-                            </div>
-                        </label>
-                    </div>
+                    <label :class="optionCard(form.is_composition_scheme)">
+                        <input v-model="form.is_composition_scheme" type="checkbox" :class="optionInput" class="rounded" />
+                        <span>
+                            <span class="block font-medium text-text-primary">Composition Scheme Taxpayer</span>
+                            <span class="mt-0.5 block text-xs text-text-tertiary">
+                                If enabled, invoices are issued as a <strong class="font-medium text-text-secondary">"Bill of Supply"</strong> with the statutory declaration <em>"Composition taxable person, not eligible to collect tax on supplies"</em> instead of charging GST.
+                            </span>
+                        </span>
+                    </label>
 
                     <div>
-                        <label :class="fieldLabel">Default Terms & Conditions (Printed on PDF)</label>
+                        <label for="gst_terms_conditions" :class="fieldLabel">Default Terms & Conditions (Printed on PDF)</label>
                         <textarea
+                            id="gst_terms_conditions"
                             v-model="form.terms_conditions"
                             rows="3"
                             :class="fieldTextarea"
@@ -335,3 +326,18 @@ const fieldTextarea = 'w-full rounded-md border border-border-subtle bg-surface-
         </form>
     </AppLayout>
 </template>
+
+<style scoped>
+/* The app's Tailwind build does not scan plugins, so classes core never uses live here. */
+.gst-uppercase {
+    text-transform: uppercase;
+}
+.gst-uppercase::placeholder {
+    text-transform: none;
+}
+.gst-saved {
+    border: 1px solid hsl(var(--status-success) / 0.3);
+    background: hsl(var(--status-success) / 0.1);
+    color: hsl(var(--status-success));
+}
+</style>

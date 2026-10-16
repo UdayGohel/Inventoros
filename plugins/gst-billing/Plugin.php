@@ -8,7 +8,7 @@ require_once __DIR__ . '/src/GstPdfService.php';
 require_once __DIR__ . '/src/GstInvoiceController.php';
 require_once __DIR__ . '/src/GstSettingsController.php';
 require_once __DIR__ . '/src/GstProductController.php';
-require_once __DIR__ . '/src/GstCustomerController.php';
+require_once __DIR__ . '/src/GstCustomerProfile.php';
 
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Route;
@@ -18,19 +18,15 @@ return function (string $slug, array $manifest): void {
     View::addNamespace($slug, __DIR__ . '/views');
 
     // 2. Register Navigation Menu Items
-    register_menu_item([
-        'label' => 'GST Invoicing',
-        'icon' => 'FileText',
-        'route' => 'plg.gst-billing.invoices', // Default route for the parent
-        'permission' => ['view_orders', 'edit_products', 'view_reports', 'edit_settings'],
-        'position' => 60,
-        'submenu' => [
-            ['label' => 'Invoices', 'route' => 'plg.gst-billing.invoices', 'permission' => 'view_orders', 'position' => 10],
-            ['label' => 'HSN & Tax Slabs', 'route' => 'plg.gst-billing.hsn', 'permission' => 'edit_products', 'position' => 20],
-            ['label' => 'GSTR Reports', 'route' => 'plg.gst-billing.reports', 'permission' => 'view_reports', 'position' => 30],
-            ['label' => 'GST Settings', 'route' => 'plg.gst-billing.settings', 'permission' => 'edit_settings', 'position' => 40],
-        ]
-    ]);
+    // The sidebar renders top-level items only (no submenus), so each page is its own item.
+    foreach ([
+        ['label' => 'GST Invoices', 'route' => 'plg.gst-billing.invoices', 'permission' => 'view_orders'],
+        ['label' => 'HSN & Tax Slabs', 'route' => 'plg.gst-billing.hsn', 'permission' => 'edit_products'],
+        ['label' => 'GSTR Reports', 'route' => 'plg.gst-billing.reports', 'permission' => 'view_reports'],
+        ['label' => 'GST Settings', 'route' => 'plg.gst-billing.settings', 'permission' => 'edit_settings'],
+    ] as $i => $item) {
+        register_menu_item($item + ['icon' => 'FileText', 'position' => 60 + $i]);
+    }
 
     // 3. Register Custom Routes
     // Plugin Pages (Inertia UI)
@@ -46,6 +42,7 @@ return function (string $slug, array $manifest): void {
                     'products.name',
                     'products.sku',
                     'products.price',
+                    'products.currency',
                     'gst_product_rates.hsn_sac_code',
                     'gst_product_rates.gst_rate'
                 )
@@ -92,8 +89,6 @@ return function (string $slug, array $manifest): void {
         Route::get('products/{product}/gst', [\Plugins\GstBilling\Src\GstProductController::class, 'getGst'])->name('plg.' . $slug . '.products.get_gst')->middleware('permission:view_products');
         Route::post('products/{product}/gst', [\Plugins\GstBilling\Src\GstProductController::class, 'saveGst'])->name('plg.' . $slug . '.products.gst')->middleware('permission:edit_products');
         Route::post('products/bulk-gst', [\Plugins\GstBilling\Src\GstProductController::class, 'bulkSaveGst'])->name('plg.' . $slug . '.products.bulk_gst')->middleware('permission:edit_products');
-        Route::get('customers/{customer}/gst', [\Plugins\GstBilling\Src\GstCustomerController::class, 'getGst'])->name('plg.' . $slug . '.customers.get_gst')->middleware('permission:view_customers');
-        Route::post('customers/{customer}/gst', [\Plugins\GstBilling\Src\GstCustomerController::class, 'saveGst'])->name('plg.' . $slug . '.customers.gst')->middleware('permission:edit_customers');
     });
 
     // 4. Inject UI slot components
@@ -109,11 +104,53 @@ return function (string $slug, array $manifest): void {
         'position' => 20,
     ]);
 
-    add_page_component('customers.show', 'actions', [
+    // Customer GST profile: fields in the customer form's Business Details card,
+    // saved with the customer, and shown in the same card on the customer page.
+    add_page_component('customers.create', 'business-details', [
         'plugin' => $slug,
-        'component' => 'CustomerGstProfile',
-        'position' => 10,
+        'component' => 'CustomerGstFields',
+        'permission' => 'create_customers',
+        'data' => fn () => ['profile' => null, 'stateCodes' => \Plugins\GstBilling\Src\GstStateCodes::getAll()],
     ]);
+
+    add_page_component('customers.edit', 'business-details', [
+        'plugin' => $slug,
+        'component' => 'CustomerGstFields',
+        'permission' => 'edit_customers',
+        'data' => fn () => [
+            'profile' => \Plugins\GstBilling\Src\GstCustomerProfile::find(request()->route('customer')?->id),
+            'stateCodes' => \Plugins\GstBilling\Src\GstStateCodes::getAll(),
+        ],
+    ]);
+
+    add_page_component('customers.show', 'business-details', [
+        'plugin' => $slug,
+        'component' => 'CustomerGstDetails',
+        'permission' => 'view_customers',
+        'data' => function () {
+            $profile = \Plugins\GstBilling\Src\GstCustomerProfile::find(request()->route('customer')?->id);
+
+            return [
+                'profile' => $profile,
+                'stateName' => $profile?->state_code ? \Plugins\GstBilling\Src\GstStateCodes::getName($profile->state_code) : null,
+            ];
+        },
+    ]);
+
+    $gstRules = function (array $rules) {
+        // Load the validation lines first: adding to a group that is not loaded yet
+        // would stop Laravel loading its own messages for this request.
+        app('translator')->get('validation.attributes');
+        app('translator')->addLines(\Plugins\GstBilling\Src\GstCustomerProfile::attributeNames(), app()->getLocale());
+
+        return $rules + \Plugins\GstBilling\Src\GstCustomerProfile::rules();
+    };
+    add_filter('customer_store_validation_rules', $gstRules);
+    add_filter('customer_update_validation_rules', $gstRules);
+
+    $saveGstProfile = fn ($customer, $request) => \Plugins\GstBilling\Src\GstCustomerProfile::saveFromRequest($customer->id, $request->validated());
+    add_action('customer_after_create', $saveGstProfile);
+    add_action('customer_after_update', $saveGstProfile);
 
     add_page_component('products.show', 'sidebar', [
         'plugin' => $slug,
