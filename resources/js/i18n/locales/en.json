@@ -653,13 +653,6 @@
       "description": "Record received quantities against this purchase order.",
       "readyToReceiveCount": "Ready to receive {count} item | Ready to receive {count} items"
     },
-    "currencies": {
-      "usd": "USD - US Dollar",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - British Pound",
-      "cad": "CAD - Canadian Dollar",
-      "aud": "AUD - Australian Dollar"
-    },
     "index": {
       "description": "Restock orders to your suppliers."
     },

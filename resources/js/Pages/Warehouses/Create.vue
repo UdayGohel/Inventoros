@@ -3,7 +3,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { currencyOptions } from '@/lib/currencies';
 import { useI18n } from 'vue-i18n';
 import { ArrowLeft } from 'lucide-vue-next';
 
@@ -48,12 +49,7 @@ const timezones = withDefault([
     { value: 'America/Vancouver', label: t('warehouses.timezoneOptions.vancouver') },
 ], props.defaults.timezone);
 
-const currencies = withDefault([
-    { value: 'CAD', label: t('purchaseOrders.currencies.cad') },
-    { value: 'USD', label: t('purchaseOrders.currencies.usd') },
-    { value: 'EUR', label: t('purchaseOrders.currencies.eur') },
-    { value: 'GBP', label: t('purchaseOrders.currencies.gbp') },
-], props.defaults.currency);
+const currencies = withDefault(currencyOptions(usePage().props.supportedCurrencies), props.defaults.currency);
 
 const submit = () => {
     form.post(route('warehouses.store'));

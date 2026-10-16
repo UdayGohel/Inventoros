@@ -752,13 +752,6 @@
       "description": "Zarejestruj ilości przyjęte w ramach tego zamówienia zakupu.",
       "readyToReceiveCount": "Pozycje gotowe do przyjęcia: {count} | Pozycje gotowe do przyjęcia: {count}"
     },
-    "currencies": {
-      "usd": "USD - Dolar amerykański",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Funt brytyjski",
-      "cad": "CAD - Dolar kanadyjski",
-      "aud": "AUD - Dolar australijski"
-    },
     "index": {
       "description": "Zamówienia uzupełniające u Twoich dostawców."
     },

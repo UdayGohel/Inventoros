@@ -752,13 +752,6 @@
       "description": "Enregistrez les quantités reçues pour ce bon de commande.",
       "readyToReceiveCount": "Prêt à réceptionner {count} article | Prêt à réceptionner {count} articles"
     },
-    "currencies": {
-      "usd": "USD - Dollar américain",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Livre sterling",
-      "cad": "CAD - Dollar canadien",
-      "aud": "AUD - Dollar australien"
-    },
     "index": {
       "description": "Commandes de réapprovisionnement auprès de vos fournisseurs."
     },

@@ -752,13 +752,6 @@
       "description": "Bu satın alma siparişi için teslim alınan miktarları kaydedin.",
       "readyToReceiveCount": "{count} kalem teslim almaya hazır | {count} kalem teslim almaya hazır"
     },
-    "currencies": {
-      "usd": "USD - ABD Doları",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - İngiliz Sterlini",
-      "cad": "CAD - Kanada Doları",
-      "aud": "AUD - Avustralya Doları"
-    },
     "index": {
       "description": "Tedarikçilerinize verilen stok yenileme siparişleri."
     },

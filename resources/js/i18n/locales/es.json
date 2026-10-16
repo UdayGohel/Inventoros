@@ -752,13 +752,6 @@
       "description": "Registra las cantidades recibidas de esta orden de compra.",
       "readyToReceiveCount": "Listo para recibir {count} artículo | Listo para recibir {count} artículos"
     },
-    "currencies": {
-      "usd": "USD - D\u00f3lar estadounidense",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Libra esterlina",
-      "cad": "CAD - D\u00f3lar canadiense",
-      "aud": "AUD - D\u00f3lar australiano"
-    },
     "index": {
       "description": "Pedidos de reabastecimiento a tus proveedores."
     },

@@ -3,12 +3,16 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { currencyOptions } from '@/lib/currencies';
+import { defaultCurrency } from '@/lib/formatSettings';
 import { ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ArrowLeft } from 'lucide-vue-next';
 
 const { t } = useI18n();
+
+const currencies = currencyOptions(usePage().props.supportedCurrencies);
 
 const form = useForm({
     name: '',
@@ -30,7 +34,7 @@ const form = useForm({
     tax_id: '',
     payment_terms: '',
     credit_limit: '',
-    currency: 'USD',
+    currency: defaultCurrency(),
     notes: '',
     is_active: true,
 });
@@ -233,11 +237,9 @@ const fieldError = 'mt-1 text-xs text-status-danger';
                         <div>
                             <label for="currency" :class="fieldLabel">{{ t('common.currency') }}</label>
                             <select id="currency" v-model="form.currency" :class="fieldInput">
-                                <option value="USD">{{ t('purchaseOrders.currencies.usd') }}</option>
-                                <option value="EUR">{{ t('purchaseOrders.currencies.eur') }}</option>
-                                <option value="GBP">{{ t('purchaseOrders.currencies.gbp') }}</option>
-                                <option value="CAD">{{ t('purchaseOrders.currencies.cad') }}</option>
-                                <option value="AUD">{{ t('purchaseOrders.currencies.aud') }}</option>
+                                <option v-for="cur in currencies" :key="cur.value" :value="cur.value">
+                                    {{ cur.label }}
+                                </option>
                             </select>
                             <p v-if="form.errors.currency" :class="fieldError">{{ form.errors.currency }}</p>
                         </div>

@@ -752,13 +752,6 @@
       "description": "根据此采购订单记录收货数量。",
       "readyToReceiveCount": "准备收货 {count} 件商品 | 准备收货 {count} 件商品"
     },
-    "currencies": {
-      "usd": "USD - 美元",
-      "eur": "EUR - 欧元",
-      "gbp": "GBP - 英镑",
-      "cad": "CAD - 加拿大元",
-      "aud": "AUD - 澳大利亚元"
-    },
     "index": {
       "description": "向供应商发出的补货订单。"
     },

@@ -752,13 +752,6 @@
       "description": "이 발주에 대해 입고된 수량을 기록합니다.",
       "readyToReceiveCount": "{count}개 품목 입고 준비 완료 | {count}개 품목 입고 준비 완료"
     },
-    "currencies": {
-      "usd": "USD - 미국 달러",
-      "eur": "EUR - 유로",
-      "gbp": "GBP - 영국 파운드",
-      "cad": "CAD - 캐나다 달러",
-      "aud": "AUD - 호주 달러"
-    },
     "index": {
       "description": "공급업체에 보내는 재입고 주문입니다."
     },

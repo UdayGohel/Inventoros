@@ -3,7 +3,9 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import PageHeader from '@/Components/ui/PageHeader.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { currencyOptions } from '@/lib/currencies';
+import { defaultCurrency } from '@/lib/formatSettings';
 import { ref, watch, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ArrowLeft, Eye } from 'lucide-vue-next';
@@ -13,6 +15,8 @@ const { t } = useI18n();
 const props = defineProps({
     customer: Object,
 });
+
+const currencies = currencyOptions(usePage().props.supportedCurrencies);
 
 const form = useForm({
     name: props.customer.name,
@@ -34,7 +38,7 @@ const form = useForm({
     tax_id: props.customer.tax_id || '',
     payment_terms: props.customer.payment_terms || '',
     credit_limit: props.customer.credit_limit || '',
-    currency: props.customer.currency || 'USD',
+    currency: props.customer.currency || defaultCurrency(),
     notes: props.customer.notes || '',
     is_active: props.customer.is_active,
 });
@@ -221,11 +225,9 @@ const fieldError = 'mt-1 text-xs text-status-danger';
                         <div>
                             <label for="currency" :class="fieldLabel">{{ t('common.currency') }}</label>
                             <select id="currency" v-model="form.currency" :class="fieldInput">
-                                <option value="USD">{{ t('purchaseOrders.currencies.usd') }}</option>
-                                <option value="EUR">{{ t('purchaseOrders.currencies.eur') }}</option>
-                                <option value="GBP">{{ t('purchaseOrders.currencies.gbp') }}</option>
-                                <option value="CAD">{{ t('purchaseOrders.currencies.cad') }}</option>
-                                <option value="AUD">{{ t('purchaseOrders.currencies.aud') }}</option>
+                                <option v-for="cur in currencies" :key="cur.value" :value="cur.value">
+                                    {{ cur.label }}
+                                </option>
                             </select>
                         </div>
                         <div class="md:col-span-2">

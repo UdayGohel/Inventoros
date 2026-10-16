@@ -752,13 +752,6 @@
       "description": "この発注に対する入荷数量を記録します。",
       "readyToReceiveCount": "{count}件の商品を入荷準備完了 | {count}件の商品を入荷準備完了"
     },
-    "currencies": {
-      "usd": "USD - 米ドル",
-      "eur": "EUR - ユーロ",
-      "gbp": "GBP - 英ポンド",
-      "cad": "CAD - カナダドル",
-      "aud": "AUD - オーストラリアドル"
-    },
     "index": {
       "description": "仕入先への補充発注です。"
     },

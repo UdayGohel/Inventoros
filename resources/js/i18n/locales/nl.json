@@ -752,13 +752,6 @@
       "description": "Registreer de ontvangen aantallen voor deze inkooporder.",
       "readyToReceiveCount": "Klaar om {count} artikel te ontvangen | Klaar om {count} artikelen te ontvangen"
     },
-    "currencies": {
-      "usd": "USD - Amerikaanse dollar",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Brits pond",
-      "cad": "CAD - Canadese dollar",
-      "aud": "AUD - Australische dollar"
-    },
     "index": {
       "description": "Aanvullingsorders bij uw leveranciers."
     },

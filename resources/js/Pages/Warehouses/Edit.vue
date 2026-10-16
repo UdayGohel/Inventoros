@@ -4,7 +4,8 @@ import PageHeader from '@/Components/ui/PageHeader.vue';
 import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
 import Badge from '@/Components/ui/Badge.vue';
-import { Head, Link, useForm, router } from '@inertiajs/vue3';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/vue3';
+import { currencyOptions } from '@/lib/currencies';
 import { useI18n } from 'vue-i18n';
 import { usePermissions } from '@/composables/usePermissions';
 import { ref, computed } from 'vue';
@@ -54,12 +55,7 @@ const timezones = [
     { value: 'America/Vancouver', label: t('warehouses.timezoneOptions.vancouver') },
 ];
 
-const currencies = [
-    { value: 'CAD', label: t('purchaseOrders.currencies.cad') },
-    { value: 'USD', label: t('purchaseOrders.currencies.usd') },
-    { value: 'EUR', label: t('purchaseOrders.currencies.eur') },
-    { value: 'GBP', label: t('purchaseOrders.currencies.gbp') },
-];
+const currencies = currencyOptions(usePage().props.supportedCurrencies);
 
 const userSearch = ref('');
 

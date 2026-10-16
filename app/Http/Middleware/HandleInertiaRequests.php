@@ -79,6 +79,8 @@ class HandleInertiaRequests extends Middleware
             // The organization's regional settings, so the frontend formats
             // money in its currency and date-only values in its date format.
             'regional' => fn () => self::regional($user?->organization),
+            // Every currency a money field may use (config/currencies.php).
+            'supportedCurrencies' => fn () => config('currencies.supported'),
             'flash' => [
                 // Controllers redirect with ->with('success'|'error'|...) in
                 // hundreds of places, and none of it reached the browser

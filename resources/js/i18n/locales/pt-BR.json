@@ -752,13 +752,6 @@
       "description": "Registre as quantidades recebidas nesta ordem de compra.",
       "readyToReceiveCount": "Pronto para receber {count} item | Pronto para receber {count} itens"
     },
-    "currencies": {
-      "usd": "USD - Dólar Americano",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Libra Esterlina",
-      "cad": "CAD - Dólar Canadense",
-      "aud": "AUD - Dólar Australiano"
-    },
     "index": {
       "description": "Pedidos de reposição aos seus fornecedores."
     },

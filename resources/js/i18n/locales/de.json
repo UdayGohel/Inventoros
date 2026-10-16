@@ -752,13 +752,6 @@
       "description": "Erfassen Sie die empfangenen Mengen zu dieser Einkaufsbestellung.",
       "readyToReceiveCount": "Bereit zum Empfang von {count} Artikel | Bereit zum Empfang von {count} Artikeln"
     },
-    "currencies": {
-      "usd": "USD - US-Dollar",
-      "eur": "EUR - Euro",
-      "gbp": "GBP - Britisches Pfund",
-      "cad": "CAD - Kanadischer Dollar",
-      "aud": "AUD - Australischer Dollar"
-    },
     "index": {
       "description": "Nachbestellungen bei Ihren Lieferanten."
     },

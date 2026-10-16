@@ -5,7 +5,9 @@ import Card from '@/Components/ui/Card.vue';
 import Button from '@/Components/ui/Button.vue';
 import PluginSlot from '@/Components/PluginSlot.vue';
 import SupplierRating from '@/Components/SupplierRating.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { currencyOptions } from '@/lib/currencies';
+import { defaultCurrency } from '@/lib/formatSettings';
 import { useI18n } from 'vue-i18n';
 import { ArrowLeft, Eye } from 'lucide-vue-next';
 
@@ -15,6 +17,8 @@ const props = defineProps({
     supplier: Object,
     pluginComponents: Object,
 });
+
+const currencies = currencyOptions(usePage().props.supportedCurrencies);
 
 const form = useForm({
     name: props.supplier.name || '',
@@ -29,7 +33,7 @@ const form = useForm({
     country: props.supplier.country || '',
     website: props.supplier.website || '',
     payment_terms: props.supplier.payment_terms || '',
-    currency: props.supplier.currency || 'USD',
+    currency: props.supplier.currency || defaultCurrency(),
     notes: props.supplier.notes || '',
     is_active: props.supplier.is_active ?? true,
     rating: props.supplier.rating ?? null,
@@ -172,11 +176,9 @@ const fieldError = 'mt-1 text-xs text-status-danger';
                         <div>
                             <label for="currency" :class="fieldLabel">{{ t('common.currency') }}</label>
                             <select id="currency" v-model="form.currency" :class="fieldInput">
-                                <option value="USD">{{ t('purchaseOrders.currencies.usd') }}</option>
-                                <option value="EUR">{{ t('purchaseOrders.currencies.eur') }}</option>
-                                <option value="GBP">{{ t('purchaseOrders.currencies.gbp') }}</option>
-                                <option value="CAD">{{ t('purchaseOrders.currencies.cad') }}</option>
-                                <option value="AUD">{{ t('purchaseOrders.currencies.aud') }}</option>
+                                <option v-for="cur in currencies" :key="cur.value" :value="cur.value">
+                                    {{ cur.label }}
+                                </option>
                             </select>
                             <p v-if="form.errors.currency" :class="fieldError">{{ form.errors.currency }}</p>
                         </div>
